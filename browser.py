@@ -12,24 +12,19 @@ from pathlib import Path
 class NotValidNumberError (Exception):
     pass
 
-class NotValidPath(Exception):
-    pass
+
 
 # raise err if num is not digit  and 0<num <8
 def is_valid_num(num):
     try:
-        if num =='':            # accept empty input to default number of directories (1)
-            return 
+    
         i = int(num) 
         if (i < 1) or (i >7 ):
             raise NotValidNumberError
     except:
         raise NotValidNumberError()
 
-# raise err if path is not exist dir
-def is_valid_path(path):
-    if not Path(path).exists():
-        raise NotValidPath()
+
 
 
 
@@ -39,6 +34,7 @@ class Browser ():
         sub directories to copy photos into, and while browsing the directory, photo will be
         displayed as thumbnails, by clicking on the desired button the photowill be copied to the fit directory
     '''
+
 
     def __init__(self):
 
@@ -66,47 +62,95 @@ class Browser ():
         self.num_of_dir = 1
         self.i = 0
         # for testing mode
-        self.prod = True
+        self.testing = False
+    
+    def initiate_app(self):
+        # grid all layouts widgets
+        self.up_frame.grid(row = 0, column = 0, columnspan = 2,padx = 0)
+        self.mid_frame.grid(row = 1, column = 0, columnspan = 2,padx = 0)
+        self.bottom_frame.grid(row = 2, column = 0, columnspan = 2, padx = 0)
+        self.mid_frame.rowconfigure([0,1], minsize=35)
+        self.bottom_frame.columnconfigure([0], minsize = self.config_data['width'])
+        # set the size of the masters fix
+        self.mid_frame.grid_propagate(False)
+        self.up_frame.grid_propagate(False)
+        self.bottom_frame.grid_propagate(False)               
+        # add the next button
+        self.next_bt.append(tk.Button(master = self.bottom_frame,text='Next', command=self.get_dir_number))
+        self.next_bt[0].grid(row = 0, column=0,pady = 10,padx = 20, sticky = 'e')
 
-    def opening_screen(self):
+    def run_app(self, redirect = False):
+        '''
+           Run the first screen of the app and allow to choose the directory to be organized
+        '''
+        self.destroy_children(self.up_frame)
+        # show the opening message
+        self.msg = tk.Label(master = self.up_frame,bg = '#B8E0FE', font="Times 16 bold", 
+        text = 'Welcome to the image browser.\nInsert the nuber of the directory\nto sort the images',
+            justify=tk.LEFT)
+        
+        self.msg.grid(row =0 , column = 0, padx  = 20, pady = 30, sticky = 'w')
+        self.btn_names.append(tk.Button(master = self.mid_frame, text = 'Click for chooce direcroty', command = self.open_file_dialog))
+        self.btn_names[0].grid(row = 0, column = 0, padx  = 100, pady=3, sticky = 'w')
+        if self.ROOT_DIR != '':
+            self.labels.insert(0,(tk.Label(master= self.mid_frame, text = 'You have choce:\n'+self.ROOT_DIR)))
+            self.labels[0].grid(row = 1, column = 0, padx = 100, pady = 6,sticky = 'w')  
+            self.labels[0].grid_propagate(False)
+        # redirect to this screen if no path was chosen
+        if redirect:
+            label = tk.Label(master=self.mid_frame, text='Please choose directory', font ='Arial 12', fg = 'Red' )
+            label.grid(row = 1, column = 0,  padx  = 100, pady=3,sticky = 'w')
+            # = '#FD8E8B'
+        
+        # add temp directory for thumbnails
+        self.thumbnail_dir.mkdir(parents=True, exist_ok=True)
+        
+        
+    def get_dir_number(self):
+        if self.ROOT_DIR == '':
+            self.run_app(redirect=True)
+
+        else:
+            self.destroy_children(self.mid_frame, self.labels, self.btn_names)     
+            self.entries.append(tk.Entry(master = self.mid_frame, bg = 'white'))
+            self.labels.append(tk.Label(self.mid_frame, text = 'Enter number of sub-directories (1-7):',
+                bg= '#B8E0FE', font='Ariel 12'))   
+
+            for i in range(len(self.entries)):
+                self.labels[i].grid(row = i, column = 0,padx = 0,sticky = 'w')
+                self.entries[i].grid(row = i, column = 1, padx = 0, sticky = 'w')
+            self.next_bt[0]['command'] = self.get_input_screen
+
+    def get_input_screen(self):
         '''getting and checking user input'''
+        
         try:
-            self.ROOT_DIR = (self.entries[0].get())
-            is_valid_path(self.ROOT_DIR)
-            is_valid_num(self.entries[1].get())
-            self.num_of_dir = int(self.entries[1].get())
-            ### debug
-            if self.num_of_dir == '':
-                self.test_data()
-            ### end debug
+            is_valid_num(self.entries[0].get())
+            self.num_of_dir = int(self.entries[0].get())
             self.img_list = [f for f in Path(self.ROOT_DIR).iterdir() if (not f.is_dir())]
             # clear previous screen
             self.destroy_children(self.up_frame)
             self.destroy_children(self.mid_frame, self.entries, self.labels)
             #  create enteries to colllect directories names
-            for j in range(self.num_of_dir):
+            for j in range(int(self.num_of_dir)):
                 entry = tk.Entry(master = self.up_frame)
                 self.entries.append(entry)
                 entry.grid(row = j, column=1,padx = 30, pady = 5)              
                 label = tk.Label(master = self.up_frame, text = 'Enter dir name:' , bg= '#B8E0FE', font='Ariel 12')
                 self.labels.append(label)
-                label.grid(row = j, column= 0, padx = 30, pady = 5)
+                label.grid(row = j, column= 0, padx = (30,0), pady = 5)
             # set the next button to new command
-            self.next_bt[0]['command'] = self.insert_name
+            self.next_bt[0]['command'] = self.get_names
         
-        except NotValidPath:
-            
-            self.msg['text'] = 'Ilegal input for path'
-            # replace by self.errmsg(msg)
         except NotValidNumberError:
+            label = tk.Label(master=self.mid_frame, text='Please enter number btween 1 to 7', font ='Arial 12', fg = 'Red' )
+            label.grid(row = 1, column = 0,  padx  = (100,0), pady=3, columnspan = 2)
             
-            self.msg['text'] ='Ilegal input for number'
-            
-    def insert_name(self):
+    def get_names(self):
         ''' collect the names of directories'''
         
         # collect the names of dirs
-        if self.prod:
+        if not self.testing:
             for e in self.entries:
                 self.names.append(e.get())
         # clear the screen display
@@ -120,10 +164,10 @@ class Browser ():
         for name in self.names:
             self.create_dir(self.ROOT_DIR, name)
             self.TOTAL[name] = 0
-        self.next_bt[0]['command']= self.show_photo
+        self.next_bt[0]['command']= self.show_photos
         
             
-    def show_photo(self):
+    def show_photos(self):
         i = self.i
         # create canvas to display thumbails
         if i == 0:
@@ -158,7 +202,7 @@ class Browser ():
             # case file is not an image
             except IOError:
                 self.i += 1
-                self.show_photo()    
+                self.show_photos()    
         # there is no more files to handle 
         else:           
             self.finish_screen()     
@@ -187,6 +231,8 @@ class Browser ():
         self.msg = tk.Label(master = c3, text = 'Final results:\n number of the images at every destination directory',
             font = ('Arial', 12), bg = self.config_data['bg'])
         self.msg.grid(row =0, column= 0, columnspan = 2, pady = (20,20))
+        if not self.testing:
+            self.num_of_dir += 1    #Note! this increment is becouse in test mode num_of_dir include trash dir, but not in prod mode
         self.draw_table(int(self.num_of_dir)+1,2,c3)
         # set the finish button to be used as exit
         self.next_bt[0]['command'] = self.exit_screen
@@ -198,55 +244,16 @@ class Browser ():
         self.root.destroy()
         
 
-    def initiate_screen(self):
-        # grid all layouts widgets
-        self.up_frame.grid(row = 0, column = 0, columnspan = 2,padx = 0)
-        self.mid_frame.grid(row = 1, column = 0, columnspan = 2,padx = 0)
-        self.bottom_frame.grid(row = 2, column = 0, columnspan = 2, padx = 0)
-        self.mid_frame.rowconfigure([0,1], minsize=35)
-        self.bottom_frame.columnconfigure([0], minsize = self.config_data['width'])
-        # set the size of the masters fix
-        self.mid_frame.grid_propagate(False)
-        self.up_frame.grid_propagate(False)
-        self.bottom_frame.grid_propagate(False)               
-
-        # add the next button
-        self.next_bt.append(tk.Button(master = self.bottom_frame,text='Next', command=self.opening_screen))
-        self.next_bt[0].grid(row = 0, column=0,pady = 10,padx = 20, sticky = 'e')
     
-    def run(self):
-        '''
-            method to initialize the app andconfig the initial display
-        '''
-        #self.initiate_screen()
-        # add the openning message for the user
-        self.msg = tk.Label(master = self.up_frame,bg = '#B8E0FE', font="Times 16 bold", 
-        text = 'Welcome to the image browser.\nInsert the nuber of the directory\nto sort the images',
-            justify=tk.LEFT)
-        self.msg.grid(row =0 , column = 0, padx  = 20, pady = 30, sticky = 'w')
-        # add entries and label to inser user input
-        self.entries.append(tk.Entry(master = self.mid_frame, bg= 'white'))
-        self.entries.append(tk.Entry(master = self.mid_frame, bg = 'white'))
-        self.labels.append(tk.Label(self.mid_frame, text = 'Enter images directory path:',
-             bg= '#B8E0FE', font='Ariel 12'))
-        self.labels.append(tk.Label(self.mid_frame, text = 'Enter number of sub-directories:',
-             bg= '#B8E0FE', font='Ariel 12'))
-        
-        for i in range(len(self.entries)):
-            self.labels[i].grid(row = i, column = 0,padx = 0, sticky = 'w')
-            self.entries[i].grid(row = i, column = 1, padx = 0,sticky = 'w')
-        
-        # add temp directory for thumbnails
-        self.thumbnail_dir.mkdir(parents=True, exist_ok=True)
-        # run the app
-        #self.root.mainloop()
     
-    def run_window(self, name, prod=True):
+    
+    
+    def run_window(self, name, testing=True):
         '''for testing propose, allow to run specific window directly'''
-        self.prod = prod
-        if not self.prod:
+        self.testing = testing
+        if self.testing:
             self.test_data()
-        self.initiate_screen()
+        self.initiate_app()
         
         getattr(Browser, name)(self)
         self.root.mainloop()
@@ -265,7 +272,7 @@ class Browser ():
         # update total
         self.TOTAL[dest.name] += 1
         # return to next image
-        self.show_photo()
+        self.show_photos()
     
     def create_dir(self, parent_dir, name):
         new_dir = Path(parent_dir) / name
@@ -301,6 +308,11 @@ class Browser ():
         for i in range(2):
             self.entries[i].config(fg='blue', font =('Arial',12, 'bold'))            
 
+    def open_file_dialog(self):
+        self.ROOT_DIR = filedialog.askdirectory(initialdir = '/')
+        self.run_app(redirect=False)
+
+
     def test_data(self):
         self.ROOT_DIR = r'C:\Users\elkana\Pictures\lego'
         self.names += ['airplanes', 'cars', 'robots', 'other','a', 'dk']
@@ -310,4 +322,4 @@ class Browser ():
 
 if __name__ == "__main__":
     b = Browser()
-    b.run_window('run', prod=False)
+    b.run_window('run_app', testing=False)

@@ -33,3 +33,26 @@ note for 20-21.9
 * git ignore push the project to git repository
 * run all 
 * hande num dir = ''
+
+
+note for 24-25.9:
+
+*Browser: 
+    fonts andbackground 
+    orgnize function
+    init - look for unneccesary fields
+    use the config data
+    
+    -> open issue : <-
+    if user insert 2 same dir names ut will couse index out of range err
+    whke drawing resukts table. becouse TOTAL dict wil contain lee keys than num_of_dir:
+    sulotion 1:
+    in draw table:
+        if len(total_values) < num_of_dir +1:
+            duolicate values
+    solution 2:
+    names = set{trash}
+    after user insert the names check len names == num of dir 
+        if smaller:
+            err msg, return to previous screen 
+            

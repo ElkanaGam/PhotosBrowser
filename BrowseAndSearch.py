@@ -18,18 +18,13 @@ class NotValidPath(Exception):
 # raise err if num is not digit  and 0<num <8
 def is_valid_num(num):
     try:
-        if num =='':            # accept empty input to default number of directories (1)
-            return 
         i = int(num) 
         if (i < 1) or (i >7 ):
             raise NotValidNumberError
     except:
         raise NotValidNumberError()
 
-# raise err if path is not exist dir
-def is_valid_path(path):
-    if not Path(path).exists():
-        raise NotValidPath()
+
 
 
 
@@ -81,7 +76,7 @@ class Browser ():
             justify=tk.LEFT)
         self.msg.grid(row =0 , column = 0, padx  = 20, pady = 30, sticky = 'w')
 
-    def get_directory(self, recurrent = False) :
+    def get_directory(self, redirect = False) :
         self.destroy_children(self.mid_frame, self.btn_names)
         self.destroy_children(self.up_frame)
         self.msg = tk.Label(master = self.up_frame,bg = '#B8E0FE', font="Times 16 bold", 
@@ -90,13 +85,13 @@ class Browser ():
         
         self.msg.grid(row =0 , column = 0, padx  = 20, pady = 30, sticky = 'w')
         self.btn_names.append(tk.Button(master = self.mid_frame, text = 'Click for chooce direcroty', command = self.open_file_dialog))
-        self.btn_names[0].grid(row = 0, column = 0, padx  = 100, pady=3, sticky = 'nsew')
+        self.btn_names[0].grid(row = 0, column = 0, padx  = 100, pady=3, sticky = 'w')
         if self.ROOT_DIR != '':
             self.labels.insert(0,(tk.Label(master= self.mid_frame, text = 'You have choce:\n'+self.ROOT_DIR)))
-            self.labels[0].grid(row = 1, column = 0, padx = 100, pady = 6)  
-        if recurrent:
-            self.msg['text'] = 'Please choose directory'
-            self.btn_names[0]['bg'] = '#FD8E8B'
+            self.labels[0].grid(row = 1, column = 0, padx = 100, pady = 6, sticky='w')  
+        if redirect:
+            label = tk.Label(master=self.mid_frame, text='Please choose directory', font ='Arial 12', fg = 'Red' )
+            label.grid(row = 1, column = 0,  padx  = 100, pady=3,sticky = 'w')
         
         # add temp directory for thumbnails
         self.thumbnail_dir.mkdir(parents=True, exist_ok=True)
@@ -106,7 +101,7 @@ class Browser ():
     
     def get_dir_number(self):
         if self.ROOT_DIR == '':
-            self.get_directory(recurrent=True)
+            self.get_directory(redirect=True)
 
         else:
             self.destroy_children(self.mid_frame, self.labels, self.btn_names)     
@@ -123,8 +118,10 @@ class Browser ():
         '''getting and checking user input'''
         
         try:
-            is_valid_num(self.entries[0].get())
-            self.num_of_dir = int(self.entries[0].get())
+            # if testing mode num_of_dir is determinded beforehand, so we dont need to take this arg from user
+            if not self.testing:            
+                is_valid_num(self.entries[0].get())
+                self.num_of_dir = int(self.entries[0].get())
             self.img_list = [f for f in Path(self.ROOT_DIR).iterdir() if (not f.is_dir())]
             # clear previous screen
             self.destroy_children(self.up_frame)
@@ -141,7 +138,9 @@ class Browser ():
             self.next_bt[0]['command'] = self.insert_name
         
         except NotValidNumberError:
-            self.msg['text'] ='Ilegal input for number'
+            
+            label = tk.Label(master=self.mid_frame, text='Please enter number btween 1 to 7', font ='Arial 12', fg = 'Red' )
+            label.grid(row = 1, column = 0,  padx  = (100,0), pady=3, columnspan = 2)
             
     def insert_name(self):
         ''' collect the names of directories'''
@@ -201,7 +200,21 @@ class Browser ():
                     btn = tk.Button(master= self.mid_frame, width = btns_max_len, text = n, command = lambda x=dest:self.send(Path(self.img_list[i]), Path(x)))
                     self.btn_names.append(btn)
                     btn.grid(row = j//4, column= (j%4)+1,padx = (3, 0), pady  = 10)
+                # add tags
+                txt = tk.Label(master=self.bottom_frame, text = 'Add Tag:')
+                loc_entry = tk.Entry(master=self.bottom_frame, fg = 'gray')
+                loc_entry.insert(0, 'location')
+                name_entry = tk.Entry(master=self.bottom_frame, fg = 'gray')
+                name_entry.insert(0, 'name')
+                txt.grid(row = 0, column = 0, padx = 4, pady = 5,sticky = 'w')
+                loc_entry.grid(row = 0, column = 1, padx = 4, pady = 5,sticky = 'w')
+                name_entry.grid(row = 0, column = 2, padx = 4, pady = 5,sticky = 'w')
+                self.next_bt[0].grid(row = 0, column=3,pady = 10,padx = 20, sticky = 'e')
+                #self.bottom_frame.columnconfigure([3], minsize = self.config_data['width']//4)
+                self.bottom_frame.columnconfigure([0,1,2], minsize = 0)
                 self.i += 1
+
+
             # case file is not an image
             except IOError:
                 self.i += 1
@@ -273,7 +286,7 @@ class Browser ():
         text = 'Welcome to the Photo Browser.\nYou can organize photos directory \nor search for photos by tag',
             justify=tk.LEFT)
         self.msg.grid(row =0 , column = 0, padx  = 20, pady = 30, sticky = 'w')
-        # add entries and label to inser user input
+        # add entries and label to insert user input
         self.btn_names.append(tk.Button(master=self.mid_frame, text = 'Select folder\nto organize', command = self.get_directory))
         self.btn_names.append(tk.Button(master=self.mid_frame, text = 'Search by tags', command = self.search_opening))
         for i in range(len(self.btn_names)):
@@ -338,6 +351,7 @@ class Browser ():
                 e.grid(row=i+1, column=j) 
         # write the data to table
         total_values = list(self.TOTAL.values())
+        print(total_values)
         for i in range (1, r):
             self.entries[(2*i)].insert(0, self.names[i-1])
             self.entries[(2*i)+1].insert(0, total_values[i-1])
@@ -347,6 +361,7 @@ class Browser ():
             self.entries[i].config(fg='blue', font =('Arial',12, 'bold'))            
 
     def test_data(self):
+        self.root.title('Photo Browser TESTING MODE')    
         self.ROOT_DIR = r'C:\Users\elkana\Documents\elkana\python\manage'
         self.names += ['airplanes', 'cars', 'robots', 'other','a', 'dk']
         self.num_of_dir = len(self.names)
@@ -355,7 +370,7 @@ class Browser ():
     def open_file_dialog(self):
         self.ROOT_DIR = filedialog.askdirectory(initialdir = '/')
         print(self.ROOT_DIR)
-        self.get_directory()
+        self.get_directory(redirect=False)
 
 
 if __name__ == "__main__":

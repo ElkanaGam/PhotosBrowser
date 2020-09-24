@@ -1,1 +1,12 @@
+# Ignore JPG files
+
 *.JPG
+# Ignore folders and sub folders
+
+!folder/
+folder/*
+ 
+# Ignore some private files
+ 
+/obj_met.py
+resize.py
