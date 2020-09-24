@@ -180,7 +180,10 @@ class Browser ():
                 # display thumbnail
                 image1 = ImageTk.PhotoImage(Image.open(str(out)))
                 # clear up_frame
-                self.msg.destroy()
+                try:
+                    self.msg.destroy()
+                except AttributeError:
+                    pass
                 # display photo
                 self.canvas1.grid(row = 0, column = 0)
                 self.canvas1.create_image(self.config_data['width']/2, 150, image=image1)
@@ -201,14 +204,14 @@ class Browser ():
                     self.btn_names.append(btn)
                     btn.grid(row = j//4, column= (j%4)+1,padx = (3, 0), pady  = 10)
                 # add tags
-                txt = tk.Label(master=self.bottom_frame, text = 'Add Tag:')
-                loc_entry = tk.Entry(master=self.bottom_frame, fg = 'gray')
-                loc_entry.insert(0, 'location')
-                name_entry = tk.Entry(master=self.bottom_frame, fg = 'gray')
-                name_entry.insert(0, 'name')
-                txt.grid(row = 0, column = 0, padx = 4, pady = 5,sticky = 'w')
-                loc_entry.grid(row = 0, column = 1, padx = 4, pady = 5,sticky = 'w')
-                name_entry.grid(row = 0, column = 2, padx = 4, pady = 5,sticky = 'w')
+                self.labels.append(tk.Label(master=self.bottom_frame, text = 'Add Tag:'))
+                self.entries.append(tk.Entry(master=self.bottom_frame, fg = 'gray'))
+                self.entries[0].insert(0, 'location')
+                self.entries.append(tk.Entry(master=self.bottom_frame, fg = 'gray'))
+                self.entries[1].insert(0, 'name')
+                self.labels[0].grid(row = 0, column = 0, padx = 4, pady = 5,sticky = 'w')
+                self.entries[0].grid(row = 0, column = 1, padx = 4, pady = 5,sticky = 'w')
+                self.entries[1].grid(row = 0, column = 2, padx = 4, pady = 5,sticky = 'w')
                 self.next_bt[0].grid(row = 0, column=3,pady = 10,padx = 20, sticky = 'e')
                 #self.bottom_frame.columnconfigure([3], minsize = self.config_data['width']//4)
                 self.bottom_frame.columnconfigure([0,1,2], minsize = 0)
@@ -317,9 +320,13 @@ class Browser ():
 
     def send(self, src, dest):
         '''send photo from root dir to the target dir chose by user'''
+        for e in self.entries:
+            print(e.get())
+            e.delete(0,tk.END)
         shutil.copy(Path(src),Path(dest))    
         # update total
         self.TOTAL[dest.name] += 1
+
         # return to next image
         self.show_photo()
         
@@ -366,6 +373,8 @@ class Browser ():
         self.names += ['airplanes', 'cars', 'robots', 'other','a', 'dk']
         self.num_of_dir = len(self.names)
         self.img_list = [f for f in Path(self.ROOT_DIR).iterdir() if (not f.is_dir())]
+        self.next_bt.append(tk.Button(master = self.bottom_frame,text='Next', command=self.get_dir_number))
+        self.next_bt[0].grid(row = 0, column=0,pady = 10,padx = 20, sticky = 'e')
 
     def open_file_dialog(self):
         self.ROOT_DIR = filedialog.askdirectory(initialdir = '/')
@@ -375,4 +384,4 @@ class Browser ():
 
 if __name__ == "__main__":
     b = Browser()
-    b.run_window('run', testing=True)
+    b.run_window('show_photo', testing=True)
