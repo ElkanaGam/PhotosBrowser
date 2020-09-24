@@ -8,5 +8,5 @@ folder/*
  
 # Ignore some private files
  
-/obj_met.py
+obj_met.py
 resize.py
