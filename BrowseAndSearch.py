@@ -59,19 +59,19 @@ class Browser ():
         self.names=['Trash']
         self.next_bt =[]
         self.img_list=[]
-        self.ROOT_DIR = ''
+        self.dir_to_organaize = ''
         self.num_of_dir = 1
         self.i = 0
         self.saver = saver
         self.im_size = (200,200)            # default
         # list to contain all selected photo
-        self.chosen_pathes =[]
+        self.chosen_pathes = set()
         # for testing mode
         self.testing = False
 
     def create_frames(self):
         '''
-            Grid the app's layouts 
+            Create the app's layouts. This method should be called before any other method which run any screen
         '''
         # the screen is composed from 3 parts, rule diffrent part of the widgets
         self.up_frame =tk.Frame(master =self.root,width=self.config_data['width'], height = 300, bg = self.config_data['bg'])
@@ -108,6 +108,12 @@ class Browser ():
         # add temp directory for thumbnails
         self.thumbnail_dir.mkdir(parents=True, exist_ok=True)
 
+    #########################################################
+    #                                                       #
+    # Search by tag section                                 #   
+    #                                                       #
+    #########################################################
+    
     def search_opening(self, redirect = False):
         '''
             App's search-by-tag option oppening screen. Clean the app's screan and add entry to insert the tag.
@@ -116,7 +122,6 @@ class Browser ():
         self.search_mode = True
         self.destroy_children(self.mid_frame, self.btn_names)
         # list for containing pathe of chosen photos
-        self.chosen_pathes = []
         self.msg['text'] =  'Welcome to the images search.\nInsert tag to filter photos\n'
         # add enteries to insertt tags (1 is default. cna be modified to more than one tag)
         for i in range(1):
@@ -152,39 +157,15 @@ class Browser ():
             else:
                 self.msg['text'] = 'There  are no photos matches\n the search tag'
 
-    def draw_outline(self, i):
-        if i < len(self.img_list) and (self.img_list[i] in self.chosen_pathes):
-            x1, y1 =  (250-self.im_size[0]/2), (150-self.im_size[1]/2)
-            x2, y2 = (x1+self.im_size[0]), (y1+self.im_size[1])
-            self.canvas1.create_rectangle(x1,y1,x2,y2, fill='', outline='red', width =3, tag='outline')
-
-    def create_navigate_btn(self):
-        ''' 
-            Create the next photo / prev photo to navigate photos, in search mode
-        '''
-        next_im_bt = tk.Button(image = self.r_symbol,command = self.show_photo)
-        prev_bt = tk.Button(image=self.l_symbol, command = self.prev)             
-        self.canvas1.create_window(self.config_data['width']*(7/8), 250, window=next_im_bt)
-        self.canvas1.create_window(self.config_data['width']*(1/8), 250, window=prev_bt)
-
-    def create_select_btn(self, i, rotation):
-        '''
-            Create the btn to select / undo selection photo in search mode
-        '''
-        select_bt = tk.Button(master=self.mid_frame, text = 'Select Photo', 
-            command = lambda x = self.img_list[i], y = rotation: self.select(x,y) )
-        rotate = tk.Button(master=self.mid_frame,text = 'Rotate',
-            command = lambda x = rotation, y='tags': self.rotate(x, mode=y))
-        undo_select = tk.Button(master=self.mid_frame, text = 'Undo selection', 
-            command = lambda x=self.img_list[i], y=rotation: self.undo_select(x,y))
-        rotate.grid(row = 0, column = 1, sticky = 'n')
-        select_bt.grid(row = 0, column =2,sticky = 'n')
-        undo_select.grid(row = 0, column =0, sticky = 'n')
-        self.mid_frame.columnconfigure([0,1,2],minsize = self.config_data['width']/3 )
-
+    #########################################################
+    #                                                       #
+    # Organaize folder section                              #   
+    #                                                       #
+    #########################################################
+    
     def organiaze_opening(self, redirect = False) :
         '''
-            Organaize folder option  openning screen
+            Organaize folder option -  openning screen
         '''
         # set app mode
         self.search_mode = False
@@ -192,15 +173,13 @@ class Browser ():
         self.msg = 'Welcome to the image browser.\nInsert the nuber of the directory\nto sort the images'
         self.btn_names.append(tk.Button(master = self.mid_frame, text = 'Click for chooce direcroty', command = self.open_file_dialog))
         self.btn_names[0].grid(row = 0, column = 0, padx  = 100, pady=3, sticky = 'w')
-        if self.ROOT_DIR != '':
-            self.labels.insert(0,(tk.Label(master= self.mid_frame, text = 'You have choce:\n'+self.ROOT_DIR,
+        if self.dir_to_organaize != '':
+            self.labels.insert(0,(tk.Label(master= self.mid_frame, text = 'You have choce:\n'+self.dir_to_organaize,
                  bg = self.config_data['bg'], font = self.config_data['font'])))
             self.labels[0].grid(row = 1, column = 0, padx = 100, pady = 6, sticky='w')  
         if redirect:
             label = tk.Label(master=self.mid_frame, text='Please choose directory', font ='Arial 12', fg = 'Red' , bg = self.config_data['bg'])
             label.grid(row = 1, column = 0,  padx  = 100, pady=3,sticky = 'w')
-        
-        
         # add the next button
         self.next_bt.append(tk.Button(master = self.bottom_frame,text='Next', command=self.get_dir_number))
         self.next_bt[0].grid(row = 0, column=0,pady = 10,padx = 20, sticky = 'e')
@@ -209,7 +188,7 @@ class Browser ():
         '''
             Create antery to get the number of desination folder to copy there the photos from original folder            
         '''
-        if self.ROOT_DIR == '':
+        if self.dir_to_organaize == '':
             self.organiaze_opening(redirect=True)
 
         else:
@@ -219,19 +198,17 @@ class Browser ():
                      font = self.config_data['font'], justify = tk.LEFT)
             l.grid(row = 2, column = 0)
             self.entries.append(tk.Entry(master = self.mid_frame, bg = 'white'))
-            
-
             self.labels.append(tk.Label(self.mid_frame, text ='Please enter number between 1-7',
                 bg= '#B8E0FE', font='Ariel 12', justify=tk.LEFT))   
-
             for i in range(len(self.entries)):
                 self.labels[i].grid(row = i, column = 0,padx = 10, sticky = 'w')
                 self.entries[i].grid(row = i, column = 1, padx = 10,sticky = 'w')
             self.next_bt[0]['command'] = self.get_folders_name
     
     def get_folders_name(self):
-        '''Craete enteries to get the new folders name'''
-        
+        '''
+            Craete enteries to get the new folders name
+        '''
         try:
             # if testing mode num_of_dir is determinded beforehand, so we dont need to take this arg from user
             if not self.testing:            
@@ -252,14 +229,14 @@ class Browser ():
             
             self.next_bt[0]['command'] = self.show_names
         
-        except NotValidNumberError:
-            
+        except NotValidNumberError: 
             label = tk.Label(master=self.mid_frame, text='Please enter number btween 1 to 7', font ='Arial 12', fg = 'Red' )
             label.grid(row = 1, column = 0,  padx  = (100,0), pady=3, columnspan = 2)
             
     def show_names(self):
-        ''' Show the names of folders, and create them'''
-        
+        ''' 
+            Show the names of folders, and create the folder at current directory
+        '''        
         # collect the names of dirs
         if not self.testing:
             for e in self.entries:
@@ -273,34 +250,37 @@ class Browser ():
         self.msg.grid(row = 0, column = 0,padx = 20, pady =40, sticky = 'nsew')
         # create the directories
         for name in self.names:
-            self.create_dir(self.ROOT_DIR, name)
+            self.create_dir(Path.cwd(), name)
             self.TOTAL[name] = 0
         # get the files in the selected folder
-        self.img_list = [f for f in Path(self.ROOT_DIR).iterdir() if (not f.is_dir())]
+        self.img_list = [f for f in Path(self.dir_to_organaize).iterdir() if (not f.is_dir())]
         self.next_bt[0]['command']= self.show_photo
         
             
     def show_photo(self, rotation=0):
+        '''
+            Iterate over img_list and display the photos
+        '''
         i = self.i
         # set next btn to be used as finish btn
         self.next_bt[0]['command'] = self.finish_screen
         self.next_bt[0]['text'] = 'Finish'
-        # create canvas to display thumbails
+        # create canvas to display thumbnails
         if i == 0:
             self.destroy_children(self.up_frame, self.labels, self.entries)
             self.canvas1 = tk.Canvas(master = self.up_frame,width=self.config_data['width'], height = 300, bg='#B8E0FE',highlightthickness=0)    
             self.canvas1.grid(row = 0, column = 0)
-        # create the btn to be selected to copy the photo
+        # in case of folder organization, create the btn to be selected to copy the photo
         if not self.search_mode:
             self.create_tags_btn()
             self.create_folder_btn(rotation, i)
-
+        # in case of search
         else:
             self.canvas1.delete('outline')
             self.create_navigate_btn()
             self.draw_outline(i)
             self.create_select_btn(i, rotation)
-        # start iterate over the files and try to treat them as photos
+        # display the Ith photo
         if i < len(self.img_list):
             try:
                 out = self.create_thumbnail(Path(self.img_list[i]), rotation)
@@ -317,34 +297,20 @@ class Browser ():
         else:           
             self.finish_screen()     
 
-
-    def create_collage(self, folder):
-        self.bar['value'] = 15
-        self.up_frame.update_idletasks()
-        try:
-            maker.main(folder, 'collage.jpg', 1080, 800, False)
-            self.bar['value'] = 100
-            self.msg['text'] = f'The collage is ready! collage name: collage.jpg'
-        except:
-            self.msg['text'] = 'Sorry. Something went wrong, coud not make collage :('
-        finally:
-            shutil.rmtree(folder)
-
-
     def finish_screen(self):    
         '''
-            The last screen of the app, show the number of photos in evry new directory
+            The last screen of the app, show the number of photos in evry new directory, or allow to create collage
+            from selected photos
         '''
-        # clear the up_frame
-        
+        # clear the screen        
         self.destroy_children(self.canvas1)
         self.destroy_children(self.up_frame)
         self.destroy_children(self.mid_frame)
         self.destroy_children(self.bottom_frame, self.next_bt)
-        if self.search_mode:
-            
+        if self.search_mode:            
             self.msg = tk.Label(master = self.up_frame,text = '', bg = self.config_data['bg'])
             self.msg.grid (row = 1, column = 0, padx = 150, pady =30)
+            # temporary directory to store selected photos
             dir = self.create_dir(Path.cwd(), 'collage_photos')
             for p in self.chosen_pathes:
                 shutil.copy(Path(p),Path(dir))    
@@ -353,7 +319,6 @@ class Browser ():
             create_btn = tk.Button(master=self.up_frame, text = 'Create Collage',
              command= lambda x = dir: self.create_collage(dir))
             create_btn.grid(row = 2, column = 0, padx =150, pady = 20)
-            
             
         else:    
             self.up_frame.rowconfigure(2, minsize = 20)
@@ -372,7 +337,8 @@ class Browser ():
                 font = ('Arial', 12), bg = self.config_data['bg'])
             self.msg.grid(row =0, column= 0, columnspan = 2, pady = (20,20))
             if not self.testing:
-                self.num_of_dir += 1    #Note! this increment is becouse in test mode num_of_dir include trash dir, but not in prod mode
+                # Note! this increment is becouse in test mode num_of_dir include trash dir, but not in prod mode
+                self.num_of_dir += 1    
             self.draw_table(int(self.num_of_dir)+1,2,c3)
         # set the finish button to be used as exit
         self.next_bt.append(tk.Button(master = self.bottom_frame,text='Exit', command=self.exit_screen))
@@ -386,7 +352,7 @@ class Browser ():
         self.root.destroy()
         
     def run_window(self, name,testing=False):
-        '''for testing propose, allow to run specific window directly'''
+        '''for testing propose, allow to run specific window directly, by passing window name'''
         self.testing = testing
         if self.testing:
             self.test_data()
@@ -398,13 +364,13 @@ class Browser ():
     
     #########################################################################
     #                                                                       #
-    # Class methods to hanndle backend actions (rotate, copy, undo....)     #
+    # Class methods to handle backend actions (rotate, copy, undo....)      #
     #                                                                       #
     #########################################################################
     
     def rotate(self, rotation, mode='organaize'):
         '''
-            Rotate photo 90 degrees counter clockwise by increment rotation counter by 1. 
+            Rotate photo 90 degrees counter clockwise,  by increment rotation counter by 1. 
             The cahnge in the photo oraintation is actualy made in the create_thumbnail method,
             which get the rotation parameter and accunt it while creating the thumbnail
         '''
@@ -413,8 +379,10 @@ class Browser ():
         self.show_photo(rotation%4)
         
 
-    def prossece_photo(self, src, dest):
-        '''Copy photo from root dir to the target dir chose by user, and store its accoiciated tags in db'''
+    def process_photo(self, src, dest):
+        '''
+            Copy photo from dir_to_organaize to the target dir chose by user, and store its accoiciated tags in db
+        '''
         tags = []
         for e in self.entries:
             if e.get()!='':
@@ -454,7 +422,9 @@ class Browser ():
         return path_to_save
     
     def draw_table(self, r, c, master):
-        ''' Create the tabel to summerize the app data'''
+        ''' 
+            Create the tabel to summerize the app data
+        '''
         self.entries.clear()     
         for i in range(r): 
             for j in range(c): 
@@ -464,7 +434,6 @@ class Browser ():
                 e.grid(row=i+1, column=j) 
         # write the data to table
         total_values = list(self.TOTAL.values())
-        print(total_values)
         for i in range (1, r):
             self.entries[(2*i)].insert(0, self.names[i-1])
             self.entries[(2*i)+1].insert(0, total_values[i-1])
@@ -479,29 +448,29 @@ class Browser ():
             Set the app in test mode: set all the relevant variables to allow test specific methid without user input
         '''
         self.root.title('Photo Browser TESTING MODE')    
-        self.ROOT_DIR = r'C:\Users\elkana\Documents\elkana\python\manage'
+        self.dir_to_organaize = r'C:\Users\elkana\Documents\elkana\python\manage'
         self.names += ['airplanes', 'cars', 'robots', 'other','a', 'dk']
         self.num_of_dir = len(self.names)
-        self.img_list = [f for f in Path(self.ROOT_DIR).iterdir() if (not f.is_dir())]
+        self.img_list = [f for f in Path(self.dir_to_organaize).iterdir() if (not f.is_dir())]
         self.next_bt.append(tk.Button(master = self.bottom_frame,text='Next', command=self.get_dir_number))
         self.next_bt[0].grid(row = 0, column=0,pady = 10,padx = 20, sticky = 'e')
         for name in self.names:
-            self.create_dir(self.ROOT_DIR, name)
+            self.create_dir(Path.cwd(), name)
             self.TOTAL[name] = 0
 
     def open_file_dialog(self):
         '''
-            Open file dialog boxand set the root_dir to the selected directory
+            Open file dialog box and set the dir_to_organaize to the selected directory
         '''
-        self.ROOT_DIR = filedialog.askdirectory(initialdir = '/')
+        self.dir_to_organaize = filedialog.askdirectory(initialdir = '/')
         self.organiaze_opening(redirect=False)
     
 
     def select(self,path, rotation):
         '''
-            Mark photo as selected: insert photo path to list a
+            Mark photo as selected: insert photo path to list 
         '''
-        self.chosen_pathes.append(path)
+        self.chosen_pathes.add(path)
         self.i -= 1
         self.show_photo(rotation)
     
@@ -511,7 +480,7 @@ class Browser ():
         '''
         try:
             self.chosen_pathes.remove(path)
-        except ValueError:
+        except KeyError:
             pass
         finally:
             self.i -= 1
@@ -527,6 +496,9 @@ class Browser ():
         self.show_photo()
         
     def create_tags_btn(self):
+        '''
+            Craete the tags widgets to enable user tagging photos
+        '''
         self.destroy_children(self.mid_frame)
         # add tags
         self.labels.append(tk.Label(master=self.bottom_frame, text = 'Add Tags (location, name, etc.):'))
@@ -540,7 +512,10 @@ class Browser ():
         self.bottom_frame.columnconfigure([0,1,2], minsize = 0)
         
     def create_folder_btn(self, rotation, i):
-        #select directory
+        '''
+            Create the button for every folder named by user. By cliciking on button, the photo 
+            will be proccesed: copy to destination folder, and stored it tags
+        '''
         btns_max_len = len(max(self.names, key=len))
         self.mid_frame.columnconfigure([0,1,2,3,4,5], minsize = 30)
         l = tk.Label(master= self.mid_frame,text = 'click to\ncopy photo', justify = tk.LEFT,
@@ -551,12 +526,52 @@ class Browser ():
                     bg = '#F38181')
         rot_btn.grid(row = 0, column = 5, rowspan = 2, padx = (10,0))
         for j, n in enumerate(self.names):
-            dest = Path(self.ROOT_DIR) / n
-            btn = tk.Button(master= self.mid_frame, width = btns_max_len, text = n, command = lambda x=dest:self.prossece_photo(Path(self.img_list[i]), Path(x)))
+            dest = Path.cwd() / n
+            btn = tk.Button(master= self.mid_frame, width = btns_max_len, text = n, command = lambda x=dest:self.process_photo(Path(self.img_list[i]), Path(x)))
             self.btn_names.append(btn)
             btn.grid(row = j//4, column= (j%4)+1,padx = (3, 0), pady  = 10)
     
+    
+    def create_navigate_btn(self):
+        ''' 
+            Create the next photo / prev photo to navigate photos, in search mode
+        '''
+        next_im_bt = tk.Button(image = self.r_symbol,command = self.show_photo)
+        prev_bt = tk.Button(image=self.l_symbol, command = self.prev)             
+        self.canvas1.create_window(self.config_data['width']*(7/8), 250, window=next_im_bt)
+        self.canvas1.create_window(self.config_data['width']*(1/8), 250, window=prev_bt)
+
+    def create_select_btn(self, i, rotation):
+        '''
+            Create the btn to select / undo selection photo in search mode
+        '''
+        select_bt = tk.Button(master=self.mid_frame, text = 'Select Photo', 
+            command = lambda x = self.img_list[i], y = rotation: self.select(x,y) )
+        rotate = tk.Button(master=self.mid_frame,text = 'Rotate',
+            command = lambda x = rotation, y='tags': self.rotate(x, mode=y))
+        undo_select = tk.Button(master=self.mid_frame, text = 'Undo selection', 
+            command = lambda x=self.img_list[i], y=rotation: self.undo_select(x,y))
+        rotate.grid(row = 0, column = 1, sticky = 'n')
+        select_bt.grid(row = 0, column =2,sticky = 'n')
+        undo_select.grid(row = 0, column =0, sticky = 'n')
+        self.mid_frame.columnconfigure([0,1,2],minsize = self.config_data['width']/3 )
+
+    
+    
+    def draw_outline(self, i, color = 'red'):
+        '''
+            Draw colored frame (default =red), for selected photos , in search mode
+        '''
+        if i < len(self.img_list) and (self.img_list[i] in self.chosen_pathes):
+            x1, y1 =  (250-self.im_size[0]/2), (150-self.im_size[1]/2)
+            x2, y2 = (x1+self.im_size[0]), (y1+self.im_size[1])
+            self.canvas1.create_rectangle(x1,y1,x2,y2, fill='', outline=color, width =3, tag='outline')
+    
+    
     def destroy_children(self, wgt, *args):
+        '''
+            Clear farme form any widget. optonaly can clear widget list (enteries, lables)
+        '''
         children = wgt.winfo_children()
         for c in children:
             c.destroy()
@@ -564,6 +579,28 @@ class Browser ():
             arg.clear()
 
 
+    def create_collage(self, folder):
+        '''
+            Create the collage from selected photos. 
+        '''
+        self.bar['value'] = 15
+        self.up_frame.update_idletasks()
+        try:
+            maker.main(folder, 'collage.jpg', 1080, 800, False)
+            self.bar['value'] = 100
+            self.msg['text'] = f'The collage is ready! collage name: collage.jpg'
+        except:
+            self.msg['text'] = 'Sorry. Something went wrong, coud not make collage :('
+        finally:
+            shutil.rmtree(folder)
+
+    
+
+
 if __name__ == "__main__":
     b = Browser()
     b.run_window('run', testing=False)
+
+
+
+# cahnge chosen path to set
